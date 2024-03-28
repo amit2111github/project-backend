@@ -1,12 +1,9 @@
 #!/usr/bin/env node
 
-/**
- * Module dependencies.
- */
-
 var app = require("../app");
 var debug = require("debug")("backend:server");
 var http = require("http");
+const axios = require('axios');
 
 /**
  * Get port from environment and store in Express.
@@ -15,10 +12,6 @@ var http = require("http");
 var port = normalizePort(process.env.PORT || "5000");
 app.set("port", port);
 
-/**
- * Create HTTP server.
- */
-
 var server = http.createServer(app);
 const io = require("socket.io")(server, {
   cors: {
@@ -26,7 +19,28 @@ const io = require("socket.io")(server, {
   },
 });
 let onlineUser = [];
+let locations = new Map();
 let map = new Map();
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
+
+function getDistance(pos1 , pos2) {
+  // console.log(pos1 , pos2);
+  const lat1 = pos1.latitude , lon1 = pos1.longitude;
+  const lat2 = pos2.latitude , lon2 = pos2.longitude;
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d;
+}
 io.on("connection", (socket) => {
   const id = socket.handshake.query.id;
   let toAddInSocket = true;
@@ -34,19 +48,42 @@ io.on("connection", (socket) => {
     if (ids == id) toAddInSocket = false;
   });
   if (toAddInSocket) {
-    // console.log("Added");
     onlineUser.push(id);
     socket.join(id);
-    console.log(onlineUser);
+    console.log("was this",onlineUser);
     socket.emit("online", onlineUser);
+    socket.broadcast.emit("online-status" , {userId :id , status : true});
   }
+  socket.on("online-status" , ({userId,user}) => {
+    socket.emit("online-status" , {userId , status : onlineUser.includes(userId)});
+  });
+  socket.on("location" , async ({userId , position}) => {
+    try {
+      if(!locations.has(userId)) {
+        const {latitude , longitude} = position;
+        const api = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+        let {data} = await axios.get(api);  
+        data.latitude = latitude;
+        data.longitude = longitude;
+        locations.set(userId , data);  
+      }
+
+      for(let [id , value] of locations) {
+        // console.log(value);
+        const distance = getDistance({latitude:value.latitude , longitude:value.longitude} ,position);
+        socket.broadcast.emit("location" , {userId : id , city : value?.city +  " " + distance + "km" });
+      }
+    }
+    catch(err) {
+      console.log(err);
+    }
+    
+    
+  });
   socket.on("peerId" , ({userId, peerId})=> {
     map.set(userId , peerId);
-    console.log(map);
   });
   socket.on("getPeerId" , ({userId , myId})=> {
-    console.log("EMITING");
-    console.log(myId , userId);
     if(!map.has(userId)) socket.emit("getPeerId",{error : "User is not online",peerId : "" , myId});
     else socket.emit("getPeerId",{error : "" ,peerId:map.get(userId) ,myId});
   });
@@ -61,20 +98,23 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     onlineUser = onlineUser.filter((user) => id != user);
     socket.emit("online", onlineUser);
+    // console.log("id is removing " , id);
+    socket.broadcast.emit("online-status", {userId : id,status : false});
     map.delete(id);
+    locations.delete(id);
   });
 
   // video
   socket.on("callended", ({ endBy, endTo }) => {
-    console.log("call ended by", endBy.name);
-    console.log(endTo.name);
+    // console.log("call ended by", endBy.name);
+    // console.log(endTo.name);
     socket.to(endTo._id).emit("callended", { endBy, endTo });
   });
   socket.on("audioChanged", (payload) => {
     socket.to(payload.userTo._id).emit("audioChanged", payload);
   });
   socket.on("videoChanged", (payload) => {
-    console.log("videochanged");
+    // console.log("videochanged");
     socket.to(payload.userTo._id).emit("videoChanged", payload);
   });
 
@@ -83,32 +123,26 @@ io.on("connection", (socket) => {
   });
   socket.on("callaccepted", (payload) => {
     socket.to(payload.callBy._id).emit("callaccepted", payload);
-    console.log("call Accepted");
+    // console.log("call Accepted");
   });
   socket.on("callrejected", (payload) => {
-    console.log("call rejected");
+    // console.log("call rejected");
 
     socket.to(payload.callBy._id).emit("callrejected", payload);
   });
 
   // sendi Message
   socket.on("message", (payload) => {
-    console.log("On Message");
+    // console.log("On Message");
     socket.to(payload.userTo._id).emit("message", payload);
   });
 });
 
-/**
- * Listen on provided port, on all network interfaces.
- */
 
 server.listen(port, () => console.log(`server is running on port ${port}`));
 server.on("error", onError);
 server.on("listening", onListening);
 
-/**
- * Normalize a port into a number, string, or false.
- */
 
 function normalizePort(val) {
   var port = parseInt(val, 10);

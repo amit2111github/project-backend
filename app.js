@@ -29,6 +29,7 @@ mongoose
   .then(() => console.log("DB connected"))
   .catch((err) => {
     console.log(err);
+    console.log(mongoDbUrl);
     console.log("DB connection failed");
   });
 

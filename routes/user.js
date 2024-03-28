@@ -10,6 +10,7 @@ const {
 	resetPassword,
 	updatePassword,
 	removeContactPersonFromContacList,
+	getAllUser
 } = require('../controller/user');
 
 // userId param
@@ -19,7 +20,7 @@ router.get('/getUser/:userId', (req, res) => {
 	return res.json(req.profile);
 });
 // adding newuser in contact list
-
+router.get("/:userId/getAll" ,isSignedIn ,isAuthenticated, getAllUser)
 router.put('/:userId/create-contact', isSignedIn, isAuthenticated, createContact);
 router.put('/forget-password', forgetPassword);
 router.post('/update-password', updatePassword);

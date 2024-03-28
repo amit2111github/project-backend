@@ -53,7 +53,7 @@ exports.createPost = async (req, res) => {
 exports.getAllPost = async (req, res) => {
 	try {
 		const skip = Number(req.query.skipcount || 0);
-		// console.log(skip);
+		// console.log(skip)lin;
 		const post = await Post.find({})
 			.skip(skip)
 			.populate('postedBy')
