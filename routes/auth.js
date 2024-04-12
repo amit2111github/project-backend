@@ -6,7 +6,7 @@ const { signIn, signUp, signOut } = require('../controller/auth');
 // singup post route
 
 router.post(
-	'/signup',
+	'/signup/:step',
 	[
 		body('name').isLength({ min: 3 }).withMessage('Name should be at least 3 char long'),
 		body('email').isEmail().withMessage('Email is required'),
