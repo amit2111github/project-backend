@@ -9,7 +9,7 @@ router.post(
 	'/signup/:step',
 	[
 		body('name').isLength({ min: 3 }).withMessage('Name should be at least 3 char long'),
-		body('email').isEmail().withMessage('Email is required'),
+		body('email').isEmail().withMessage('Invalid email'),
 		body('password').isLength({ min: 6 }).withMessage('Password should be at least 6 char long'),
 	],
 	signUp
@@ -19,7 +19,7 @@ router.post(
 router.post(
 	'/signin',
 	[
-		body('email').isEmail().withMessage('Email is required'),
+		body('email').isEmail().withMessage('Invalid email'),
 		body('password').isLength({ min: 1 }).withMessage('Password is required'),
 	],
 	signIn
