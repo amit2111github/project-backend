@@ -26,7 +26,7 @@ function deg2rad(deg) {
 }
 
 function getDistance(pos1 , pos2) {
-  // console.log(pos1 , pos2);
+  console.log(pos1 , pos2);
   const lat1 = pos1.latitude , lon1 = pos1.longitude;
   const lat2 = pos2.latitude , lon2 = pos2.longitude;
   var R = 6371; // Radius of the earth in km
