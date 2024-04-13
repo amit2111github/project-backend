@@ -69,6 +69,7 @@ io.on("connection", (socket) => {
       }
 
       for(let [id , value] of locations) {
+        if(id == userId) continue;
         // console.log(value);
         const distance = getDistance({latitude:value.latitude , longitude:value.longitude} ,position);
         console.log("broadcasting dis of " , id);
