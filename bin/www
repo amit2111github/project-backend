@@ -72,7 +72,7 @@ io.on("connection", (socket) => {
         if(id == userId) continue;
         // console.log(value);
         const distance = getDistance({latitude:value.latitude , longitude:value.longitude} ,position);
-        console.log("broadcasting dis of " , id);
+        console.log("broadcasting dis of " , id , userId);
         socket.broadcast.emit("location" , {userId : id , city : value?.city +  " " + distance + "km" });
       }
     }
